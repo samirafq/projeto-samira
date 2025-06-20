@@ -1,76 +1,61 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-const App = () => {
+export default function App() {
   const apiUrl = "https://u52aw2xgj3.execute-api.us-east-1.amazonaws.com/dev";
 
   const [id, setId] = useState("");
   const [telefone, setTelefone] = useState("");
   const [alunos, setAlunos] = useState("");
-  const [resultado, setResultado] = useState("");
   const [items, setItems] = useState([]);
+  const [msg, setMsg] = useState("");
 
-  // GET
-  const buscarItems = async () => {
+  // Buscar todos os itens
+  const fetchItems = async () => {
     try {
-      const response = await axios.get(`${apiUrl}/items`);
-      setItems(response.data);
+      const res = await axios.get(`${apiUrl}/items`);
+      setItems(res.data || []);
     } catch (error) {
-      console.error("Erro ao buscar itens", error);
-      setResultado("Erro ao buscar itens.");
+      setMsg("Erro ao carregar itens.");
     }
   };
 
   useEffect(() => {
-    buscarItems();
+    fetchItems();
   }, []);
 
-  // POST
-  const criarItem = async () => {
+  // Criar ou atualizar item (PUT)
+  const salvarItem = async () => {
+    if (!id.trim()) {
+      setMsg("ID é obrigatório.");
+      return;
+    }
     try {
       const body = {
-        id,
-        telefone,
-        alunos: alunos.split(",").map((a) => a.trim()),
+        id: id.trim(),
+        telefone: telefone.trim(),
+        alunos: alunos
+          .split(",")
+          .map((a) => a.trim())
+          .filter((a) => a.length > 0),
       };
-      await axios.post(`${apiUrl}/items`, body);
-      setResultado("Item criado com sucesso!");
+      await axios.put(`${apiUrl}/items`, body);
+      setMsg("Item salvo com sucesso!");
       limparCampos();
-      buscarItems();
-    } catch (error) {
-      console.error("Erro ao criar item", error);
-      setResultado("Erro ao criar item.");
+      fetchItems();
+    } catch {
+      setMsg("Erro ao salvar item.");
     }
   };
 
-  // PUT
-  const atualizarItem = async () => {
+  // Excluir item
+  const excluirItem = async (idExcluir) => {
     try {
-      const body = {
-        id,
-        telefone,
-        alunos: alunos.split(",").map((a) => a.trim()),
-      };
-      await axios.put(`${apiUrl}/${id}`, body);
-      setResultado("Item atualizado com sucesso!");
-      limparCampos();
-      buscarItems();
-    } catch (error) {
-      console.error("Erro ao atualizar item", error);
-      setResultado("Erro ao atualizar item.");
-    }
-  };
-
-  // DELETE
-  const deletarItem = async () => {
-    try {
-      await axios.delete(`${apiUrl}/${id}`);
-      setResultado("Item deletado com sucesso!");
-      limparCampos();
-      buscarItems();
-    } catch (error) {
-      console.error("Erro ao deletar item", error);
-      setResultado("Erro ao deletar item.");
+      await axios.delete(`${apiUrl}/items/${idExcluir}`);
+      setMsg(`Item "${idExcluir}" excluído.`);
+      fetchItems();
+    } catch {
+      setMsg("Erro ao excluir item.");
     }
   };
 
@@ -78,177 +63,84 @@ const App = () => {
     setId("");
     setTelefone("");
     setAlunos("");
+    setMsg("");
   };
 
   return (
-    <div
-      style={{
-        maxWidth: 600,
-        margin: "40px auto",
-        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-        padding: 20,
-        borderRadius: 10,
-        boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
-        backgroundColor: "#fefefe",
-      }}
-    >
-      <h1 style={{ textAlign: "center", color: "#333" }}>
-        Lista de Itens Cadastrados
-      </h1>
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-indigo-100 p-6 font-sans">
+      <div className="max-w-3xl mx-auto bg-white shadow-xl rounded-xl p-8">
+        <h1 className="text-3xl font-bold text-indigo-700 text-center mb-6">
+          🎓 Cadastro de Responsáveis e Alunos
+        </h1>
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 15,
-          marginBottom: 20,
-        }}
-      >
-        <input
-          style={{
-            padding: 10,
-            fontSize: 16,
-            borderRadius: 5,
-            border: "1px solid #ccc",
-            outline: "none",
-          }}
-          type="text"
-          placeholder="ID"
-          value={id}
-          onChange={(e) => setId(e.target.value)}
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <input
+            type="text"
+            placeholder="ID (obrigatório)"
+            className="border rounded-lg px-4 py-2"
+            value={id}
+            onChange={(e) => setId(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Telefone (opcional)"
+            className="border rounded-lg px-4 py-2"
+            value={telefone}
+            onChange={(e) => setTelefone(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Alunos (separados por vírgula)"
+            className="border rounded-lg px-4 py-2"
+            value={alunos}
+            onChange={(e) => setAlunos(e.target.value)}
+          />
+        </div>
 
-        <input
-          style={{
-            padding: 10,
-            fontSize: 16,
-            borderRadius: 5,
-            border: "1px solid #ccc",
-            outline: "none",
-          }}
-          type="text"
-          placeholder="Telefone"
-          value={telefone}
-          onChange={(e) => setTelefone(e.target.value)}
-        />
+        <div className="flex gap-4 mb-6 flex-wrap justify-center">
+          <button
+            onClick={salvarItem}
+            className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg shadow"
+          >
+            Salvar
+          </button>
+          <button
+            onClick={limparCampos}
+            className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded-lg shadow"
+          >
+            Limpar
+          </button>
+        </div>
 
-        <input
-          style={{
-            padding: 10,
-            fontSize: 16,
-            borderRadius: 5,
-            border: "1px solid #ccc",
-            outline: "none",
-          }}
-          type="text"
-          placeholder="Alunos (separados por vírgula)"
-          value={alunos}
-          onChange={(e) => setAlunos(e.target.value)}
-        />
-      </div>
+        {msg && (
+          <div className="mb-4 text-center text-indigo-700 font-semibold">{msg}</div>
+        )}
 
-      <div
-        style={{
-          display: "flex",
-          gap: 10,
-          justifyContent: "center",
-          flexWrap: "wrap",
-          marginBottom: 20,
-        }}
-      >
-        <button
-          onClick={criarItem}
-          style={{
-            backgroundColor: "#4caf50",
-            color: "white",
-            border: "none",
-            padding: "10px 20px",
-            borderRadius: 5,
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
-        >
-          Criar
-        </button>
-
-        <button
-          onClick={atualizarItem}
-          style={{
-            backgroundColor: "#2196f3",
-            color: "white",
-            border: "none",
-            padding: "10px 20px",
-            borderRadius: 5,
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
-        >
-          Atualizar
-        </button>
-
-        <button
-          onClick={deletarItem}
-          style={{
-            backgroundColor: "#f44336",
-            color: "white",
-            border: "none",
-            padding: "10px 20px",
-            borderRadius: 5,
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
-        >
-          Deletar
-        </button>
-
-        <button
-          onClick={buscarItems}
-          style={{
-            backgroundColor: "#555",
-            color: "white",
-            border: "none",
-            padding: "10px 20px",
-            borderRadius: 5,
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
-        >
-          Buscar
-        </button>
-      </div>
-
-      <div style={{ textAlign: "center", marginBottom: 20, minHeight: 24 }}>
-        <strong>{resultado}</strong>
-      </div>
-
-      <div>
-        <h2 style={{ borderBottom: "1px solid #ccc", paddingBottom: 10 }}>
-          Itens no banco:
-        </h2>
-        <ul style={{ listStyle: "none", paddingLeft: 0 }}>
+        <div className="space-y-4">
           {items.length === 0 && (
-            <li style={{ color: "#999" }}>Nenhum item encontrado.</li>
+            <p className="text-gray-500 text-center">Nenhum item cadastrado.</p>
           )}
-          {items.map((item, index) => (
-            <li
-              key={index}
-              style={{
-                backgroundColor: "#fafafa",
-                padding: 15,
-                marginBottom: 10,
-                borderRadius: 6,
-                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-              }}
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="bg-sky-50 border-l-4 border-indigo-300 p-4 rounded-md shadow-sm"
             >
-              <b>ID:</b> {item.id} | <b>Telefone:</b> {item.telefone || "-"} |{" "}
-              <b>Alunos:</b>{" "}
-              {Array.isArray(item.alunos) ? item.alunos.join(", ") : "-"}
-            </li>
+              <div><b>ID:</b> {item.id}</div>
+              <div><b>Telefone:</b> {item.telefone || "—"}</div>
+              <div>
+                <b>Alunos:</b>{" "}
+                {Array.isArray(item.alunos) ? item.alunos.join(", ") : "—"}
+              </div>
+              <button
+                onClick={() => excluirItem(item.id)}
+                className="mt-2 text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+              >
+                Excluir
+              </button>
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
     </div>
   );
-};
-
-export default App;
+}
