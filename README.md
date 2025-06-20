@@ -1,7 +1,3 @@
-Claro! Aqui está um README completo para o seu projeto, contendo as informações da tarefa, detalhes técnicos, instruções de uso, e referências:
-
----
-
 # Projeto Avaliação 10 – Sincronização de Dados
 
 ## Descrição
