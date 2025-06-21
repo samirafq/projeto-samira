@@ -1,146 +1,141 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useEffect, useState } from "react";
 
-export default function App() {
-  const apiUrl = "https://u52aw2xgj3.execute-api.us-east-1.amazonaws.com/dev";
-
-  const [id, setId] = useState("");
-  const [telefone, setTelefone] = useState("");
-  const [alunos, setAlunos] = useState("");
+function App() {
   const [items, setItems] = useState([]);
-  const [msg, setMsg] = useState("");
+  const [id, setId] = useState("");
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Buscar todos os itens
-  const fetchItems = async () => {
-    try {
-      const res = await axios.get(`${apiUrl}/items`);
-      setItems(res.data || []);
-    } catch (error) {
-      setMsg("Erro ao carregar itens.");
-    }
+  const API_URL = "https://u52aw2xgj3.execute-api.us-east-1.amazonaws.com/samira-dev/items";
+
+  const fetchItems = () => {
+    setLoading(true);
+    setError(null);
+    fetch(API_URL)
+      .then((response) => {
+        if (!response.ok) throw new Error("Erro ao carregar os dados da API.");
+        return response.json();
+      })
+      .then((data) => {
+        setItems(data);
+        setLoading(false);
+      })
+      .catch((error) => {
+        setError(error.message);
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
     fetchItems();
   }, []);
 
-  // Criar ou atualizar item (PUT)
-  const salvarItem = async () => {
-    if (!id.trim()) {
-      setMsg("ID é obrigatório.");
-      return;
-    }
-    try {
-      const body = {
-        id: id.trim(),
-        telefone: telefone.trim(),
-        alunos: alunos
-          .split(",")
-          .map((a) => a.trim())
-          .filter((a) => a.length > 0),
-      };
-      await axios.put(`${apiUrl}/items`, body);
-      setMsg("Item salvo com sucesso!");
-      limparCampos();
-      fetchItems();
-    } catch {
-      setMsg("Erro ao salvar item.");
-    }
+  const handleCreate = () => {
+    setError(null);
+    fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, name }),
+    })
+      .then((res) => res.json())
+      .then(() => {
+        alert("Item criado com sucesso!");
+        fetchItems();
+        setId("");
+        setName("");
+      })
+      .catch((err) => {
+        alert("Erro ao criar item: " + err.message);
+        setError(err.message);
+      });
   };
 
-  // Excluir item
-  const excluirItem = async (idExcluir) => {
-    try {
-      await axios.delete(`${apiUrl}/items/${idExcluir}`);
-      setMsg(`Item "${idExcluir}" excluído.`);
-      fetchItems();
-    } catch {
-      setMsg("Erro ao excluir item.");
-    }
+  const handleUpdate = () => {
+    setError(null);
+    fetch(API_URL, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, name }),
+    })
+      .then((res) => res.json())
+      .then(() => {
+        alert("Item atualizado com sucesso!");
+        fetchItems();
+        setId("");
+        setName("");
+      })
+      .catch((err) => {
+        alert("Erro ao atualizar item: " + err.message);
+        setError(err.message);
+      });
   };
 
-  const limparCampos = () => {
-    setId("");
-    setTelefone("");
-    setAlunos("");
-    setMsg("");
+  const handleDelete = (deleteId) => {
+    setError(null);
+    fetch(`${API_URL}/${deleteId}`, {
+      method: "DELETE",
+    })
+      .then((res) => res.json())
+      .then(() => {
+        alert("Item excluído com sucesso!");
+        fetchItems();
+      })
+      .catch((err) => {
+        alert("Erro ao excluir item: " + err.message);
+        setError(err.message);
+      });
   };
+
+  if (loading) return <p>Carregando dados...</p>;
+  if (error) return <p className="text-red-500">Erro: {error}</p>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-indigo-100 p-6 font-sans">
-      <div className="max-w-3xl mx-auto bg-white shadow-xl rounded-xl p-8">
-        <h1 className="text-3xl font-bold text-indigo-700 text-center mb-6">
-          🎓 Cadastro de Responsáveis e Alunos
-        </h1>
+    <div className="text-white bg-gray-900 min-h-screen p-10 font-sans">
+      <h1 className="text-3xl font-bold mb-6">CRUD com AWS</h1>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-          <input
-            type="text"
-            placeholder="ID (obrigatório)"
-            className="border rounded-lg px-4 py-2"
-            value={id}
-            onChange={(e) => setId(e.target.value)}
-          />
-          <input
-            type="text"
-            placeholder="Telefone (opcional)"
-            className="border rounded-lg px-4 py-2"
-            value={telefone}
-            onChange={(e) => setTelefone(e.target.value)}
-          />
-          <input
-            type="text"
-            placeholder="Alunos (separados por vírgula)"
-            className="border rounded-lg px-4 py-2"
-            value={alunos}
-            onChange={(e) => setAlunos(e.target.value)}
-          />
-        </div>
-
-        <div className="flex gap-4 mb-6 flex-wrap justify-center">
-          <button
-            onClick={salvarItem}
-            className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg shadow"
-          >
-            Salvar
-          </button>
-          <button
-            onClick={limparCampos}
-            className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded-lg shadow"
-          >
-            Limpar
-          </button>
-        </div>
-
-        {msg && (
-          <div className="mb-4 text-center text-indigo-700 font-semibold">{msg}</div>
-        )}
-
-        <div className="space-y-4">
-          {items.length === 0 && (
-            <p className="text-gray-500 text-center">Nenhum item cadastrado.</p>
-          )}
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="bg-sky-50 border-l-4 border-indigo-300 p-4 rounded-md shadow-sm"
-            >
-              <div><b>ID:</b> {item.id}</div>
-              <div><b>Telefone:</b> {item.telefone || "—"}</div>
-              <div>
-                <b>Alunos:</b>{" "}
-                {Array.isArray(item.alunos) ? item.alunos.join(", ") : "—"}
-              </div>
-              <button
-                onClick={() => excluirItem(item.id)}
-                className="mt-2 text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
-              >
-                Excluir
-              </button>
-            </div>
-          ))}
-        </div>
+      <div className="flex gap-2 mb-6">
+        <input
+          type="text"
+          placeholder="ID"
+          value={id}
+          onChange={(e) => setId(e.target.value)}
+          className="px-3 py-2 rounded bg-gray-800 text-white"
+        />
+        <input
+          type="text"
+          placeholder="Nome"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="px-3 py-2 rounded bg-gray-800 text-white"
+        />
+        <button onClick={handleCreate} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
+          Criar
+        </button>
+        <button onClick={handleUpdate} className="bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded">
+          Atualizar
+        </button>
       </div>
+
+      <h2 className="text-2xl font-semibold mb-4">Lista de Itens da API</h2>
+      <ul className="space-y-2">
+        {items.map((item, index) => (
+          <li key={index} className="bg-gray-800 p-3 rounded flex justify-between items-center">
+            <span>
+              <strong>ID:</strong> {item.id} | <strong>Nome:</strong> {item.name}
+            </span>
+            <button
+              onClick={() => handleDelete(item.id)}
+              className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded"
+            >
+              Excluir
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
+
+export default App;
+
